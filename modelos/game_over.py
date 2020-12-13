@@ -22,7 +22,6 @@ class GameOver(object):
 
     def draw(self, pipeline):
         sg.drawSceneGraphNode(self.model, pipeline, "transform")
-        print("esto no prendio")
 
     def rotar(self, angulo):
         self.model.transform = tr.rotationZ(angulo)
