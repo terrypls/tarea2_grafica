@@ -44,15 +44,12 @@ class Controlador(object):
 
         elif (key == glfw.KEY_E) and action == glfw.PRESS:
             self.camara.set_vista_2d()
-            print(self.camara.get_vista_actual())
 
-        elif (key == glfw.KEY_R) and action == glfw.PRESS:
-            self.camara.set_vista_fps()
-            print(self.camara.get_vista_actual())
+        #elif (key == glfw.KEY_R) and action == glfw.PRESS:
+        #    self.camara.set_vista_fps()
 
         elif (key == glfw.KEY_T) and action == glfw.PRESS:
             self.camara.set_vista_rts()
-            print(self.camara.get_vista_actual())
 
         else:
             return     

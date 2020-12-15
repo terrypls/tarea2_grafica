@@ -4,7 +4,7 @@ Daniel Calderon, CC3501, 2019-2
 Rendering a OBJ file simplified
 """
 
-from CourseResources import basic_shapes as bs
+from librerias import basic_shapes as bs
 
 
 def readFaceVertex(faceDescription):

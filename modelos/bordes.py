@@ -1,9 +1,10 @@
 from librerias import basic_shapes as bs
 from librerias import easy_shaders as es
-from librerias import scene_graph as sg
-from librerias import transformations as tr
-from OpenGL.GL import glClearColor
+from librerias import scene_graph2 as sg
+from librerias import transformations2 as tr
+from OpenGL.GL import *
 
+from math import pi
 
 class Bordes(object):
 
@@ -11,50 +12,50 @@ class Bordes(object):
         self.nGrilla = nGrilla
         self.cuadrado = 2/self.nGrilla
 
+        path_imagen = "recursos/bricks.jpg"
+
         #aqui creamos la cosa en la gpu
-        gpu_borde = es.toGPUShape(bs.createColorQuad(0.7, 0.7, 0.7))
+        gpu_bloque = es.toGPUShape(bs.createTextureCube(path_imagen), GL_REPEAT, GL_NEAREST)
 
-        #creamos el rectangulo base vertical
-        bordeVertical = sg.SceneGraphNode('bordeVertical')
-        bordeVertical.transform = tr.scale(self.cuadrado, 2, 1)
-        bordeVertical.childs += [gpu_borde]
-        #base horizontal
-        bordeHorizontal = sg.SceneGraphNode('bordeHorizontal')
-        bordeHorizontal.transform = tr.scale(2, self.cuadrado, 1)
-        bordeHorizontal.childs += [gpu_borde]
-
-        # derecha
-        bordeDerecho = sg.SceneGraphNode('bordeDerecho')
-        bordeDerecho.transform = tr.translate(1,0,0)
-        bordeDerecho.childs += [bordeVertical]
-
-        # izquierda
-
-        bordeIzquierdo = sg.SceneGraphNode('bordeIzquierdo')
-        bordeIzquierdo.transform = tr.translate(-1,0,0)
-        bordeIzquierdo.childs += [bordeVertical]
-
-        # Arriba
-        bordeArriba = sg.SceneGraphNode('bordeArriba')
-        bordeArriba.transform = tr.translate(0, 1, 0)
-        bordeArriba.childs+=[bordeHorizontal]
-
-        # Abajo
-        bordeAbajo = sg.SceneGraphNode('bordeAbajo')
-        bordeAbajo.transform = tr.translate(0, -1, 0)
-        bordeAbajo.childs+=[bordeHorizontal]
-
-        # agrupamos todo en una sola figura
-        bordeEntero = sg.SceneGraphNode('bordes')
-        bordeEntero.childs += [bordeArriba,bordeDerecho,bordeAbajo,bordeIzquierdo]
+        bloque = sg.SceneGraphNode("Bloque")
+        bloque.transform = tr.matmul([tr.scale(self.cuadrado,self.cuadrado,self.cuadrado),tr.translate(0,0,0)])
+        bloque.childs += [gpu_bloque]
         
-        # con este trabajamos en caso que queramos cambiar las cosas
-        bordeTransformada = sg.SceneGraphNode('bordesTR')
-        bordeTransformada.childs += [bordeEntero] 
+        largo = self.cuadrado / 2
+        i = largo - 1
         
-        self.model = bordeTransformada
-        self.pos = 0
+        muralla_list=[]
+        while i <1:
+            murallas = sg.SceneGraphNode("bloque_" + str(i))
+            murallas.transform = tr.translate(1 - largo, i, 0)
+            murallas.childs += [bloque]
+            muralla_list.append(murallas)
+            i += self.cuadrado
 
-    def draw(self, pipeline):
-        sg.drawSceneGraphNode(self.model, pipeline, "transform")
+        larguero = sg.SceneGraphNode("Muralla")
+        larguero.transform = tr.identity()
+        larguero.childs += muralla_list
+
+        bordes = sg.SceneGraphNode("bordes")
+        bordes.transforms = tr.identity()
+        bordes_list = []
+        for i in range(0, 4):
+            muro = sg.SceneGraphNode("muro" + str(i))
+            muro.transform = tr.rotationZ(i * pi / 2)
+            muro.childs += [larguero]
+            bordes_list.append(muro)
+
+
+        bordes.childs += bordes_list
+        
+        self.model = bordes
+        print("se creo una muralla :D")
+
+        
+
+    def draw(self, pipeline_texture, projection, view):
+        glUseProgram(pipeline_texture.shaderProgram)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_texture.shaderProgram, "projection"), 1, GL_TRUE, projection)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_texture.shaderProgram, "view"), 1, GL_TRUE, view)
+        sg.drawSceneGraphNode(sg.findNode(self.model, 'bordes'), pipeline_texture)
 

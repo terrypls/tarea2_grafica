@@ -1,7 +1,6 @@
 """
 Aqui se ejecuta el snake snake
 """
-
 import glfw
 from OpenGL.GL import *
 import sys
@@ -50,27 +49,20 @@ def SneakySnake(grilla=10,resolution=700):
     # Setting up the clear screen color
     glClearColor(245/255, 222/255, 179/255, 1.0)
 
-    # Our shapes here are always fully painted
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
     # Activates the depth as we are working in 3D
     glEnable(GL_DEPTH_TEST)
-
-    #magia para que no se vea negro el png
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     
     # HACEMOS LOS OBJETOS
     camara = Camara(grilla)
-
     fondo = Fondo(grilla)
-    #borde = Bordes(grilla)
-    #manzana = Manzana(grilla)
-    #serpiente = Serpiente(grilla,manzana)
-    #gameOver = GameOver()
-    t0 = 0
-    #controlador.setSerpiente(serpiente)
+    borde = Bordes(grilla)
+    manzana = Manzana(grilla)
+    serpiente = Serpiente(grilla,manzana)
+    gameOver = GameOver()
+    controlador.setSerpiente(serpiente)
     controlador.setCamara(camara)
+
+    t0 = 0
     
     
 
@@ -85,34 +77,28 @@ def SneakySnake(grilla=10,resolution=700):
         #Camara
         vista = camara.get_vista()
         proyeccion = camara.get_proyeccion()
- 
-        fondo.draw(texturas,proyeccion,vista)
 
-        # Reconocer la logica
-
-        # DIBUJAR LOS MODELOS
+        manzana.draw(luces,proyeccion,vista)
+        fondo.draw(texturas, proyeccion, vista)
+        borde.draw(texturas, proyeccion, vista)
+        serpiente.draw(texturas, proyeccion, vista)
+        serpiente.comerManzana()
     
         # Calculamos el dt
         ti = glfw.get_time()
-        margen = 0.35
-        
+        margen = 0.35        
         dt = ti - t0
-
 
         if dt > margen:
             t0 = glfw.get_time()
-            print(camara.get_vista_actual())
+            serpiente.movimientoPerpetuo()
 
-            #serpiente.movimientoPerpetuo()
-
-
-        #if controlador.hayChoque():
-        #    gameOver.draw(pipeline_texturas)
-        #    gameOver.rotar(ti * (pi / 8))
-        #    print("ITS OVER SNAKE")
-
-
-
+        if controlador.hayChoque():
+            gameOver.draw(texturas, proyeccion, vista)
+            if dt > margen:
+                gameOver.rotar(pi / 8)
+                print("ITS OVER SNAKE")                
+           
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)

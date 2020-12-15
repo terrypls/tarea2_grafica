@@ -1,80 +1,58 @@
-from librerias import transformations as tr
+from librerias import transformations2 as tr
 from librerias import basic_shapes as bs
-from librerias import scene_graph as sg
+from librerias import scene_graph2 as sg
 from librerias import easy_shaders as es
+from librerias.obj_reader import readOBJ
 
-from OpenGL.GL import glClearColor
-from random import randint
+from OpenGL.GL import *
+from random import randint, random
 
+from math import pi
 
 class Manzana(object):
 
     def __init__(self,nGrilla):
         self.nGrilla = nGrilla
-        self.cuadrado = round(2/self.nGrilla,4)
-
-
-        gpu_manzana = es.toGPUShape(bs.createColorQuad(220/255, 30/255, 40/255))
-        gpu_palito = es.toGPUShape(bs.createColorQuad(139/255,69/255,19/255))
-        gpu_hoja = es.toGPUShape(bs.createColorQuad(0,100/255,0))
-
-        # cuerpo de la manzana
-        cuerpo = sg.SceneGraphNode('Cuerpo')
-        #cuerpo.transform = tr.matmul([tr.scale(self.cuadrado, self.cuadrado, 0),tr.translate(0,0,0)])
-        cuerpo.childs = [gpu_manzana]
-
-        palito = sg.SceneGraphNode('Palito')
-        palito.transform = tr.translate(0,1,0)
-        palito.childs = [gpu_palito]
-
-        palitotr = sg.SceneGraphNode('Palitotr')
-        palitotr.transform = tr.scale(0.2, 0.65, 0)
-        palitotr.childs = [palito]
-
-        hojita = sg.SceneGraphNode('Hojita')
-        hojita.transform = tr.matmul([tr.scale(0.4,0.15,0),tr.translate(0.5,5,0)])
-        hojita.childs = [gpu_hoja]
-
-        hojita1 = sg.SceneGraphNode('Hojita1')
-        hojita1.transform = tr.matmul([tr.scale(0.4, 0.15, 0), tr.translate(0.3, 5.2, 0)])
-        hojita1.childs = [gpu_hoja]
+        self.cuadrado = round(2 / self.nGrilla, 4)
         
-        hojita2 = sg.SceneGraphNode('Hojita2')
-        hojita2.transform = tr.matmul([tr.scale(0.4, 0.15, 0), tr.translate(0.3, 4.8, 0)])
-        hojita2.childs = [gpu_hoja]
+        path_imagen = 'recursos/carrot.obj'
+        gpu_manzana = es.toGPUShape(shape=readOBJ(path_imagen, (200/255, 20 / 255, 20 / 255)))
 
-        manzana = sg.SceneGraphNode('Manzana')
-        manzana.transform = tr.scale(self.cuadrado/2,self.cuadrado/2,0)
-        manzana.childs = [ hojita,hojita1,hojita2,palitotr,cuerpo]
+        manzana = sg.SceneGraphNode("cuerpo")
+        manzana.transform = tr.matmul([tr.uniformScale(self.cuadrado), tr.rotationX(pi / 2)])
+        manzana.childs+=[gpu_manzana]
         
         manzanatr = sg.SceneGraphNode('Manzanatr')
-        
         manzanatr.childs= [manzana]
 
-        self.model = manzanatr
         self.delta = 0
-        self.pos_x = 0
-        self.pos_y = 0
+        if self.nGrilla % 2 == 0:
+            self.delta = self.cuadrado/2
+
+        self.model = manzanatr
+        self.consumidas = 0
+        self.respawn()
+        self.consumidas = 0
+        self.r =0
+        self.g =0.5
+        self.b = 0.5
+        self.brillo = 100
+        self.altura=10
+
         
-        if self.nGrilla %2 ==0:
-            
-            self.model.transform = tr.translate(self.cuadrado + self.getRandomPosition(),self.cuadrado + self.getRandomPosition(),0)
-        else:
-            self.delta = self.cuadrado
-            
-            self.model.transform = tr.translate(self.cuadrado / 2 + self.getRandomPosition(),self.cuadrado / 2 + self.getRandomPosition(),0)
-        
 
-
-
+    
     #aqui empezamos a dibujar la manzana
-    def draw(self, pipeline):
-        sg.drawSceneGraphNode(self.model, pipeline, "transform")
+    def draw(self, pipeline_light, projection, view):
+        self.iluminacion(pipeline_light,view)
+        glUseProgram(pipeline_light.shaderProgram)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_light.shaderProgram, "projection"), 1, GL_TRUE, projection)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_light.shaderProgram, "view"), 1, GL_TRUE, view)
+        sg.drawSceneGraphNode(sg.findNode(self.model, 'Manzanatr'), pipeline_light)
 
     def actualizarPosicion(self):
         self.model.transform = tr.translate(self.pos_x, self.pos_y, 0)
         
-
     def getPosicion(self):
         return [self.pos_x,self.pos_y]
 
@@ -92,3 +70,38 @@ class Manzana(object):
     def respawn(self):
         self.nuevosEjes()
         self.actualizarPosicion()
+        self.consumidas += 1
+        print(self.consumidas)
+        if self.consumidas % 3 == 0 and self.consumidas != 0:
+            self.cambiar_color()
+
+
+    def cambiar_color(self):
+        self.r = random()
+        self.g = random()
+        self.b = random()
+        self.brillo= randint(0,100)
+
+        print("r "+str(self.r)+" g "+str(self.g)+" b "+str(self.b)+", brillo: "+str(self.brillo)+" altura: "+str(self.altura))
+        
+        
+
+    def iluminacion(self,pipeline_light, view):
+        camera_view = view[0]
+        glUseProgram(pipeline_light.shaderProgram)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "La"), 1.0, 1.0, 1.0)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "Ld"), 1.0, 1.0, 1.0)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "Ls"), 1.0, 1.0, 1.0)
+
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "Ka"), self.r, self.r, self.r)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "Kd"),self.g, self.g, self.g)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "Ks"), self.b, self.b, self.b)
+
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "lightPosition"), 0, 0, self.altura)
+        glUniform3f(glGetUniformLocation(pipeline_light.shaderProgram, "viewPosition"), camera_view[0],
+                    camera_view[1], camera_view[2], )
+        glUniform1ui(glGetUniformLocation(pipeline_light.shaderProgram, "shininess"), self.brillo)
+        glUniform1f(glGetUniformLocation(pipeline_light.shaderProgram, "constantAttenuation"), 0.001)
+        glUniform1f(glGetUniformLocation(pipeline_light.shaderProgram, "linearAttenuation"), 0.1)
+        glUniform1f(glGetUniformLocation(pipeline_light.shaderProgram, "quadraticAttenuation"), 0.01)
+        glUniform1f(glGetUniformLocation(pipeline_light.shaderProgram, "quadraticAttenuation"), 0.01)

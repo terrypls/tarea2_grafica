@@ -6,7 +6,7 @@ class Camara(object):
     def __init__(self, nGrilla):
         self.nGrilla = nGrilla
         self.cuadrado = 2 / self.nGrilla
-        self.posicion = "rts"
+        self.posicion = "2d"
 
 
     def get_vista(self):

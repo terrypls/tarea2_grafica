@@ -1,9 +1,10 @@
-from librerias import transformations as tr
+from librerias import transformations2 as tr
 from librerias import basic_shapes as bs
-from librerias import scene_graph as sg
+from librerias import scene_graph2 as sg
 from librerias import easy_shaders as es
 
 from OpenGL.GL import *
+from math import pi
 
 class Serpiente(object):
     
@@ -12,33 +13,48 @@ class Serpiente(object):
         self.nGrilla = nGrilla
         self.cuadrado = 2 / self.nGrilla
         self.estado = True
-        self.direccion = "Derecha"
+        self.direccion = "Izquierda"
         self.manzana = manzana
         
 
-        gpu_serpiente = es.toGPUShape(bs.createTextureQuad("recursos/snake.png"), GL_REPEAT, GL_NEAREST)
+        gpu_cuerpo = es.toGPUShape(bs.createTextureCube("recursos/question_box.png"), GL_REPEAT, GL_NEAREST)
+        gpu_cara = es.toGPUShape(bs.createTextureCube("recursos/Metal_Gear_MSX_Snake_sprite.png"), GL_REPEAT, GL_NEAREST)
+
+        cuerpo = sg.SceneGraphNode("cuerpo")
+        cuerpo.transform = tr.matmul([tr.scale(1, 1, 1), tr.translate(0, 0, 0)])
+        cuerpo.childs += [gpu_cuerpo]
+
+        cabeza = sg.SceneGraphNode("cabeza")
+        cabeza.transform = tr.matmul([tr.scale(0.95, 0.95, 0.95), tr.translate(0.1, 0, 0)])
+        cabeza.childs += [gpu_cara]
+
+
 
         snake = sg.SceneGraphNode('Snake')
-        snake.transform = tr.matmul([tr.scale(self.cuadrado, self.cuadrado, 0),tr.translate(0,0,0)])
-        snake.childs = [gpu_serpiente]
+        snake.transform = tr.scale(self.cuadrado, self.cuadrado, self.cuadrado)
+        snake.childs = [cabeza]
         
         snaketr = sg.SceneGraphNode('SnakeTR')
         snaketr.childs = [snake]
 
-
         self.model = snaketr
 
-        if self.nGrilla %2 ==0:
-            self.pos_x = 0
-            self.pos_y = 0
-        else:
-            self.pos_x = self.cuadrado / 2
-            self.pos_y = self.cuadrado / 2
-            self.model.transform = tr.translate(self.cuadrado/2,self.cuadrado/2,0)
+        self.delta = 0
+        if self.nGrilla % 2 == 0:
+            self.delta = self.cuadrado/2
 
 
-    def draw(self, pipeline):
-        sg.drawSceneGraphNode(self.model, pipeline, "transform")
+        self.pos_x = self.delta
+        self.pos_y = self.delta
+        
+        self.model.transform = tr.matmul([tr.translate(self.delta, self.delta, 0), tr.rotationZ(pi / 2)])
+
+
+    def draw(self, pipeline_texture, projection, view):
+        glUseProgram(pipeline_texture.shaderProgram)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_texture.shaderProgram, "projection"), 1, GL_TRUE, projection)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline_texture.shaderProgram, "view"), 1, GL_TRUE, view)
+        sg.drawSceneGraphNode(sg.findNode(self.model, 'SnakeTR'), pipeline_texture)
 
     def setDireccion(self, direccion):
         self.direccion = direccion
@@ -92,7 +108,7 @@ class Serpiente(object):
 
 
     def choque(self):
-        muralla = 1 - self.cuadrado/2
+        muralla = 1 - self.cuadrado
         if self.pos_x >= muralla or self.pos_x <= -muralla or self.pos_y >= muralla or self.pos_y <= -muralla :
             self.estado = False
             print("chocamos D:")
